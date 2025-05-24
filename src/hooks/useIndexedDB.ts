@@ -5,15 +5,20 @@ import { db } from '../db';
 
 export function useDocument(id: number) {
   const [content, setContent] = useState<string>('# Hello, Markdown!');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let canceled = false;
 
-    db.documents.get(id).then(doc => {
+    db.documents?.get(id).then(doc => {
       if (!canceled && doc?.content) {
         setContent(doc.content);
       }
-    }).catch(console.error);
+      setIsLoading(false);
+    }).catch(error => {
+      console.error(error);
+      setIsLoading(false);
+    });
 
     return () => {
       canceled = true;
@@ -22,10 +27,10 @@ export function useDocument(id: number) {
 
   const saveContent = useCallback((newContent: string) => {
     setContent(newContent);
-    db.documents.put({ id, content: newContent }).catch(console.error);
+    db.documents?.put({ id, content: newContent }).catch(console.error);
   }, [id]);
 
-  return { content, saveContent };
+  return { content, setContent, saveContent, isLoading };
 }
 
 export function useSetting(key: string, defaultValue: string) {
@@ -34,7 +39,7 @@ export function useSetting(key: string, defaultValue: string) {
   useEffect(() => {
     let canceled = false;
 
-    db.settings.get(key).then(setting => {
+    db.settings?.get(key).then(setting => {
       if (!canceled && setting?.value) {
         setValue(setting.value);
       }
@@ -47,7 +52,7 @@ export function useSetting(key: string, defaultValue: string) {
 
   const saveSetting = useCallback((newValue: string) => {
     setValue(newValue);
-    db.settings.put({ key, value: newValue }).catch(console.error);
+    db.settings?.put({ key, value: newValue }).catch(console.error);
   }, [key]);
 
   return { value, saveSetting };
