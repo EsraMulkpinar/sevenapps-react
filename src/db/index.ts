@@ -46,8 +46,10 @@ class MarkdownPlaygroundDB extends Dexie implements StorageInterface {
   }
 
   async put(data: StorageData) {
-    if ('key' in data) {
+    if ('key' in data && 'value' in data) {
       return this.settings.put(data as Setting);
+    } else if ('key' in data && 'content' in data) {
+      return this.samples.put(data as Sample);
     } else if ('id' in data) {
       return this.documents.put(data as Document);
     }
@@ -55,7 +57,13 @@ class MarkdownPlaygroundDB extends Dexie implements StorageInterface {
   }
 }
 
+const isClient = () => {
+  return typeof window !== 'undefined';
+};
+
 const isIndexedDBAvailable = () => {
+  if (!isClient()) return false;
+  
   try {
     return 'indexedDB' in window;
   } catch {
@@ -64,13 +72,17 @@ const isIndexedDBAvailable = () => {
 };
 
 class FallbackStorage implements StorageInterface {
-  private storage: Storage;
+  private storage: Storage | null = null;
 
   constructor() {
-    this.storage = window.localStorage;
+    if (isClient()) {
+      this.storage = window.localStorage;
+    }
   }
 
   async get(key: string) {
+    if (!this.storage) return null;
+    
     const data = this.storage.getItem(key);
     if (!data) return null;
     
@@ -86,26 +98,45 @@ class FallbackStorage implements StorageInterface {
   }
 
   async put(data: StorageData) {
+    if (!this.storage) return data;
+    
     const key = 'key' in data ? data.key : 'id' in data ? String(data.id) : '';
     this.storage.setItem(key, JSON.stringify(data));
     return data;
   }
 }
 
-export const db: StorageInterface = isIndexedDBAvailable() ? new MarkdownPlaygroundDB() : new FallbackStorage();
+let dbInstance: StorageInterface | null = null;
 
-if (isIndexedDBAvailable() && 'documents' in db) {
-  (async () => {
-    try {
-      const count = await db.documents!.count();
-      if (count === 0) {
-        await db?.documents!.add({
-          id: 1,
-          content: '# Welcome to Markdown Playground\n\nStart typing to see live preview!'
-        });
+const createDB = (): StorageInterface => {
+  if (!isClient()) {    
+    return {
+      async get() { return null; },
+      async put(data) { return data; }
+    };
+  }
+  
+  return isIndexedDBAvailable() ? new MarkdownPlaygroundDB() : new FallbackStorage();
+};
+
+export const db: StorageInterface = dbInstance || (dbInstance = createDB());
+
+if (isClient() && isIndexedDBAvailable()) {
+  const initializeDB = async () => {
+    try { 
+      if ('documents' in db && db.documents) {
+        const count = await db.documents.count();
+        if (count === 0) {
+          await db.documents.add({
+            id: 1,
+            content: '# Hello, Markdown!\n\nStart typing to see live preview!'
+          });
+        }
       }
     } catch (error) {
       console.error('Error initializing database:', error);
     }
-  })();
+  };
+
+  initializeDB();
 }

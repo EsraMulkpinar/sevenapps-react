@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import "./globals.css";
+import { db } from "@/db";
 
 export default function RootLayout({
   children,
@@ -11,23 +12,29 @@ export default function RootLayout({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    
-    const initializeTheme = () => {
+    const initializeTheme = async () => {
       const root = document.documentElement;
-      const savedTheme = localStorage.getItem('theme');
-      
-      if (savedTheme === 'dark' || savedTheme === 'light') {
-        root.classList.add(savedTheme);
-        document.body.style.setProperty('--background', savedTheme === 'dark' ? '#0a0a0a' : '#ffffff');
-        document.body.style.setProperty('--foreground', savedTheme === 'dark' ? '#ededed' : '#171717');
-      } else {
-        const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const theme = isDarkMode ? 'dark' : 'light';
+
+      try {
+        const themeSetting = await db.get('theme');
+        let theme: 'dark' | 'light';
+
+        if (themeSetting?.value === 'dark' || themeSetting?.value === 'light') {
+          theme = themeSetting.value;
+        } else {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          theme = prefersDark ? 'dark' : 'light';
+          await db.put({ key: 'theme', value: theme });
+        }
+
         root.classList.add(theme);
-        document.body.style.setProperty('--background', isDarkMode ? '#0a0a0a' : '#ffffff');
-        document.body.style.setProperty('--foreground', isDarkMode ? '#ededed' : '#171717');
+        document.body.style.setProperty('--background', theme === 'dark' ? '#0a0a0a' : '#ffffff');
+        document.body.style.setProperty('--foreground', theme === 'dark' ? '#ededed' : '#171717');
+      } catch (error) {
+        console.error("Failed to initialize theme:", error);
       }
+
+      setMounted(true);
     };
 
     initializeTheme();

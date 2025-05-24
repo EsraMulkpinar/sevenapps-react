@@ -1,7 +1,7 @@
 "use client";
 
 import { useSetting } from "@hooks/useIndexedDB";
-import { db } from "@/db";
+import { useSamples } from "@hooks/useSamples";
 import { useEffect, useState, useCallback } from "react";
 
 interface SampleSelectorProps {
@@ -9,60 +9,29 @@ interface SampleSelectorProps {
   currentSample: string;
 }
 
-interface Sample {
-  label: string;
-  path: string;
-}
-
-interface SampleData {
-  [key: string]: Sample;
-}
-
-const samples: SampleData = {
-  hello: { label: "Hello", path: "hello.md" },
-  intro: { label: "Intro", path: "intro.md" },
-  features: { label: "Features", path: "features.md" },
-  usage: { label: "Usage", path: "usage.md" },
-};
-
-const sampleImports = {
-  hello: () => import("@samples/hello.md"),
-  intro: () => import("@samples/intro.md"),
-  features: () => import("@samples/features.md"), 
-  usage: () => import("@samples/usage.md"),
-};
-
 export default function SampleSelector({ onSelect, currentSample }: SampleSelectorProps) {
   const { value: selected, saveSetting: setSelected } = useSetting(
     "selectedSample",
     currentSample
   );
+  const { samples, getSample, isLoading: samplesLoading } = useSamples();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSampleLoad = useCallback(async (key: string) => {
-    if (!key || !samples[key as keyof typeof samples]) return;
+    if (!key) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const savedSample = await db.samples?.get(key);
-      let content: string;
+      const sample = await getSample(key);
       
-      if (savedSample?.content) {
-        content = savedSample.content;
+      if (sample?.content) {
+        onSelect(key, sample.content);
       } else {
-        const importFn = sampleImports[key as keyof typeof sampleImports];
-        if (!importFn) {
-          throw new Error(`Import function not found for ${key}`);
+        throw new Error(`Sample ${key} not found`);
         }
-        const mod = await importFn();
-        content = mod.default;
-        await db.samples?.put({ key, content });
-      }
-      
-      onSelect(key, content);
     } catch (error) {
       console.error("Error loading sample:", error);
       setError("Failed to load sample. Please try again.");
@@ -70,13 +39,13 @@ export default function SampleSelector({ onSelect, currentSample }: SampleSelect
     } finally {
       setIsLoading(false);
     }
-  }, [onSelect]);
+  }, [onSelect, getSample]);
 
   useEffect(() => {
-    if (selected && selected !== currentSample) {
+    if (selected && selected !== currentSample && samples.length > 0) {
       handleSampleLoad(selected);
     }
-  }, [selected, currentSample, handleSampleLoad]);
+  }, [selected, currentSample, handleSampleLoad, samples.length]);
 
   const handleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const key = e.target.value;
@@ -89,12 +58,21 @@ export default function SampleSelector({ onSelect, currentSample }: SampleSelect
     }
   }, [setSelected, handleSampleLoad, onSelect]);
 
+  if (samplesLoading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+        <span className="text-sm text-gray-600 dark:text-gray-400">Loading samples...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <select
         value={currentSample}
         onChange={handleChange}
-        disabled={isLoading}
+        disabled={isLoading || samplesLoading}
         className={`appearance-none p-2 pl-3 pr-8 rounded-md transition-colors duration-200 
         bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 
         border border-gray-200 dark:border-gray-700 
@@ -107,13 +85,13 @@ export default function SampleSelector({ onSelect, currentSample }: SampleSelect
           borderColor: "var(--border-color)",
         }}
       >
-        {Object.entries(samples).map(([key, { label }]) => (
+        {samples.map((sample) => (
           <option 
-            key={key} 
-            value={key}
+            key={sample.key} 
+            value={sample.key}
             className="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           >
-            {label}
+            {sample.title}
           </option>
         ))}
       </select>

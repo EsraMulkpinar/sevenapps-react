@@ -6,31 +6,32 @@ import Preview from "@components/Preview";
 import SampleSelector from "@components/SampleSelector";
 import ThemeToggle from "@components/ThemeToggle";
 import { useDocument, useSetting } from "@hooks/useIndexedDB";
-import { db } from "@/db";
+import { useSamples } from "@hooks/useSamples";
 import { debounce } from "@/utils";
 
 export default function Home() {
   const { content, setContent, saveContent, isLoading } = useDocument(1);
   const { value: selectedSample, saveSetting: setSelectedSample } = useSetting("selectedSample", "hello");
+  const { samples, getSample, updateSample } = useSamples();
   
   useEffect(() => {
-    if (selectedSample) {
-      db.samples?.get(selectedSample).then(sample => {
+    if (selectedSample && samples.length > 0) {
+      getSample(selectedSample).then(sample => {
         if (sample?.content) {
           setContent(sample.content);
         }
       }).catch(console.error);
     }
-  }, [selectedSample, setContent]);
+  }, [selectedSample, samples.length, getSample, setContent]);
 
   const debouncedSave = useMemo(
     () => debounce((newContent: string, sampleKey: string) => {
       saveContent(newContent);
       if (sampleKey) {
-        db.samples?.put({ key: sampleKey, content: newContent }).catch(console.error);
+        updateSample(sampleKey, newContent);
       }
     }, 500),
-    [saveContent]
+    [saveContent, updateSample]
   );
 
   const handleMarkdownChange = useCallback((newContent: string) => {
@@ -39,13 +40,10 @@ export default function Home() {
   }, [setContent, debouncedSave, selectedSample]);
 
   const handleSampleSelect = useCallback((sampleKey: string, sampleContent: string) => {
-    console.log('Sample selected:', sampleKey, 'Content length:', sampleContent.length);
     setSelectedSample(sampleKey);
     setContent(sampleContent);
-    if (sampleKey) {
-      db.samples?.put({ key: sampleKey, content: sampleContent }).catch(console.error);
-    }
-  }, [setSelectedSample, setContent]);
+    updateSample(sampleKey, sampleContent);
+  }, [setSelectedSample, setContent, updateSample]);
 
   if (isLoading) {
     return (
