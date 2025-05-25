@@ -76,25 +76,28 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="flex items-center gap-2 rounded-md p-2 text-sm font-medium transition-colors 
-      hover:bg-gray-100 dark:hover:bg-gray-800"
+      className="flex items-center gap-2 rounded-md p-2 text-sm font-medium transition-all duration-200 
+      text-gray-900 dark:text-gray-200
+      hover:bg-gray-200 hover:shadow-sm active:scale-95 
+      dark:hover:bg-gray-700
+      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
       aria-label="Toggle theme"
     >
       {theme === 'light' && (
         <>
-          <SunIcon className="h-5 w-5" />
+          <SunIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
           <span>Light</span>
         </>
       )}
       {theme === 'dark' && (
         <>
-          <MoonIcon className="h-5 w-5" />
+          <MoonIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <span>Dark</span>
         </>
       )}
       {theme === 'system' && (
         <>
-          <ComputerIcon className="h-5 w-5" />
+          <ComputerIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <span>System</span>
         </>
       )}
