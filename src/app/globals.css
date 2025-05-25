@@ -24,6 +24,65 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+
+  :root:not(.light):not(.dark) .markdown-body {
+    color-scheme: dark;
+    color: #e6edf3;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body h6 {
+    color: #7d8590;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body blockquote {
+    color: #7d8590;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body code {
+    background-color: rgba(110, 118, 129, 0.4);
+    color: #e6edf3;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body pre {
+    background-color: #0d1117;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body pre code {
+    background-color: transparent;
+    color: #e6edf3;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body table tr {
+    background-color: #0d1117;
+    border-top: 1px solid #30363d;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body table tr:nth-child(2n) {
+    background-color: #161b22;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body table th {
+    border: 1px solid #30363d;
+    background-color: #161b22;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body table td {
+    border: 1px solid #30363d;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body a {
+    color: #58a6ff;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body a:hover {
+    color: #79c0ff;
+  }
+
+  :root:not(.light):not(.dark) .markdown-body hr {
+    background-color: #30363d;
+  }
 }
 
 body {
@@ -255,26 +314,74 @@ body:has(html.light) textarea,
   text-decoration: underline;
 }
 
-[data-theme='dark'] .markdown-body {
+[data-theme='dark'] .markdown-body,
+.dark .markdown-body {
   color-scheme: dark;
+  color: #e6edf3;
 }
 
-[data-theme='dark'] .markdown-body code {
+[data-theme='dark'] .markdown-body h6,
+.dark .markdown-body h6 {
+  color: #7d8590;
+}
+
+[data-theme='dark'] .markdown-body blockquote,
+.dark .markdown-body blockquote {
+  color: #7d8590;
+}
+
+[data-theme='dark'] .markdown-body code,
+.dark .markdown-body code {
   background-color: rgba(110, 118, 129, 0.4);
+  color: #e6edf3;
 }
 
-[data-theme='dark'] .markdown-body pre {
-  background-color: #161b22;
-}
-
-[data-theme='dark'] .markdown-body table tr {
-  background-color: #161b22;
-}
-
-[data-theme='dark'] .markdown-body table tr:nth-child(2n) {
+[data-theme='dark'] .markdown-body pre,
+.dark .markdown-body pre {
   background-color: #0d1117;
+  color: #e6edf3;
+  border: 1px solid #30363d;
 }
 
-[data-theme='dark'] .markdown-body a {
+[data-theme='dark'] .markdown-body pre code,
+.dark .markdown-body pre code {
+  background-color: transparent;
+  color: #e6edf3;
+}
+
+[data-theme='dark'] .markdown-body table tr,
+.dark .markdown-body table tr {
+  background-color: #0d1117;
+  border-top: 1px solid #30363d;
+}
+
+[data-theme='dark'] .markdown-body table tr:nth-child(2n),
+.dark .markdown-body table tr:nth-child(2n) {
+  background-color: #161b22;
+}
+
+[data-theme='dark'] .markdown-body table th,
+.dark .markdown-body table th {
+  border: 1px solid #30363d;
+  background-color: #161b22;
+}
+
+[data-theme='dark'] .markdown-body table td,
+.dark .markdown-body table td {
+  border: 1px solid #30363d;
+}
+
+[data-theme='dark'] .markdown-body a,
+.dark .markdown-body a {
   color: #58a6ff;
+}
+
+[data-theme='dark'] .markdown-body a:hover,
+.dark .markdown-body a:hover {
+  color: #79c0ff;
+}
+
+[data-theme='dark'] .markdown-body hr,
+.dark .markdown-body hr {
+  background-color: #30363d;
 }

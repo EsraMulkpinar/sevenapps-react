@@ -2,9 +2,25 @@
 
 import { useEffect } from 'react';
 import { useSetting } from '@hooks/useIndexedDB';
+import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 
 export default function ThemeToggle() {
   const { value: theme, saveSetting: setTheme } = useSetting('theme', 'system');
+  
+  const toggleTheme = () => {
+    if (theme === 'light') {
+      setTheme('dark');
+    } else if (theme === 'dark') {
+      setTheme('system');
+    } else {
+      setTheme('light');
+    }
+  };
+
+  useKeyboardShortcuts({
+    onThemeToggle: toggleTheme,
+    isEnabled: true
+  });
   
   useEffect(() => {
     const root = document.documentElement;
@@ -50,17 +66,7 @@ export default function ThemeToggle() {
     }, 10);
     
   }, [theme]);
-  
-  const toggleTheme = () => {
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('system');
-    } else {
-      setTheme('light');
-    }
-  };
-  
+
   return (
     <button
       onClick={toggleTheme}

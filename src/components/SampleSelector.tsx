@@ -1,8 +1,7 @@
 "use client";
 
-import { useSetting } from "@hooks/useIndexedDB";
 import { useSamples } from "@hooks/useSamples";
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 interface SampleSelectorProps {
   onSelect: (key: string, content: string) => void;
@@ -10,10 +9,6 @@ interface SampleSelectorProps {
 }
 
 export default function SampleSelector({ onSelect, currentSample }: SampleSelectorProps) {
-  const { value: selected, saveSetting: setSelected } = useSetting(
-    "selectedSample",
-    currentSample
-  );
   const { samples, getSample, isLoading: samplesLoading } = useSamples();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,22 +36,16 @@ export default function SampleSelector({ onSelect, currentSample }: SampleSelect
     }
   }, [onSelect, getSample]);
 
-  useEffect(() => {
-    if (selected && selected !== currentSample && samples.length > 0) {
-      handleSampleLoad(selected);
-    }
-  }, [selected, currentSample, handleSampleLoad, samples.length]);
 
   const handleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const key = e.target.value;
-    setSelected(key);
     
     if (key) {
       await handleSampleLoad(key);
     } else {
       onSelect('', '# Hello, Markdown!\n\nStart typing to see live preview!');
     }
-  }, [setSelected, handleSampleLoad, onSelect]);
+  }, [handleSampleLoad, onSelect]);
 
   if (samplesLoading) {
     return (

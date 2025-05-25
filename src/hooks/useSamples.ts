@@ -22,8 +22,8 @@ export function useSamples() {
 
   const loadSampleFile = useCallback(async (sampleConfig: typeof SAMPLE_FILES[0]): Promise<string> => {
     try {
-      const module = await sampleConfig.importFn();
-      return module.default || '';
+      const moduleContent = await sampleConfig.importFn();
+      return moduleContent.default || '';
     } catch (error) {
       console.error(`Error loading sample file ${sampleConfig.key}:`, error);
       return `# Error\n\nCould not load ${sampleConfig.key}`;
