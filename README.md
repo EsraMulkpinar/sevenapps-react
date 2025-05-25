@@ -45,8 +45,7 @@ npm run build
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl/⌘ + D` | Toggle theme |
-| `Ctrl/⌘ + 1-5` | Load sample documents |
-| `F11` / `Escape` | Toggle/exit fullscreen |
+| `Ctrl/⌘ + 1-4` | Load sample documents |
 
 ---
 
