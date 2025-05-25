@@ -1,34 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { debounce } from '@/utils';
 
-type UnifiedProcessor = any;
+type UnifiedProcessor = {
+  use: (plugin: unknown, ...args: unknown[]) => UnifiedProcessor;
+  process: (content: string) => Promise<{ toString(): string }>;
+};
+
 type ProcessorResult = { toString(): string };
 
 interface MarkdownParserModules {
-  unified: any;
-  remarkParse: any;
-  remarkGfm: any;
-  remarkRehype: any;
-  rehypeSanitize: any;
-  rehypeStringify: any;
-  rehypePrism: any;
+  unified: () => UnifiedProcessor;
+  remarkParse: { default: () => void };
+  remarkGfm: { default: () => void };
+  remarkRehype: { default: (options?: { allowDangerousHtml?: boolean }) => void };
+  rehypeSanitize: { default: (options?: Record<string, unknown>) => void };
+  rehypeStringify: { default: () => void };
 }
 
-let parserModules: MarkdownParserModules | null = null;
-let parserLoadingPromise: Promise<MarkdownParserModules> | null = null;
+let globalParserModules: MarkdownParserModules | null = null;
+let globalLoadingPromise: Promise<MarkdownParserModules> | null = null;
 
 const loadParserModules = async (): Promise<MarkdownParserModules> => {
-  if (parserModules) {
-    return parserModules;
+  if (globalParserModules) {
+    return globalParserModules;
   }
 
-  if (parserLoadingPromise) {
-    return parserLoadingPromise;
+  if (globalLoadingPromise) {
+    return globalLoadingPromise;
   }
 
-  parserLoadingPromise = (async () => {
+  globalLoadingPromise = (async () => {
     try {
       const [
         { unified },
@@ -36,80 +39,56 @@ const loadParserModules = async (): Promise<MarkdownParserModules> => {
         remarkGfm,
         remarkRehype,
         rehypeSanitize,
-        rehypeStringify,
-        rehypePrism
+        rehypeStringify
       ] = await Promise.all([
         import('unified'),
         import('remark-parse'),
         import('remark-gfm'),
         import('remark-rehype'),
         import('rehype-sanitize'),
-        import('rehype-stringify'),
-        import('rehype-prism-plus')
+        import('rehype-stringify')
       ]);
 
       const modules: MarkdownParserModules = {
-        unified,
+        unified: unified as () => UnifiedProcessor,
         remarkParse,
         remarkGfm,
         remarkRehype,
         rehypeSanitize,
-        rehypeStringify,
-        rehypePrism
+        rehypeStringify
       };
 
-      parserModules = modules;
+      globalParserModules = modules;
       return modules;
     } catch (error) {
-      parserLoadingPromise = null;
+      globalLoadingPromise = null;
       throw error;
     }
   })();
 
-  return parserLoadingPromise;
+  return globalLoadingPromise;
 };
 
-export function useMarkdownParser(markdown: string): { html: string; isLoading: boolean } {
+export function useMarkdownParser(markdown: string): { html: string; isLoading: boolean; triggerProcess: () => void } {
   const [html, setHtml] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [parserReady, setParserReady] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const processorRef = useRef<UnifiedProcessor | null>(null);
+  const isInitializedRef = useRef<boolean>(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const getOrCreateProcessor = useCallback(async (): Promise<UnifiedProcessor> => {
+    if (processorRef.current) {
+      return processorRef.current;
+    }
 
-    const initializeParser = async () => {
-      try {
-        await loadParserModules();
-        if (isMounted) {
-          setParserReady(true);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Failed to load markdown parser:', error);
-        if (isMounted) {
-          setHtml('<p>Error: Failed to load markdown parser</p>');
-          setIsLoading(false);
-        }
-      }
-    };
-
-    initializeParser();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const createProcessor = useCallback(async (): Promise<UnifiedProcessor> => {
     const modules = await loadParserModules();
     
-    return modules.unified()
+    processorRef.current = modules.unified()
       .use(modules.remarkParse.default)
       .use(modules.remarkGfm.default)
       .use(modules.remarkRehype.default, { allowDangerousHtml: false })
       .use(modules.rehypeSanitize.default, {
         attributes: {
-          '*': ['className'],
+          '*': ['className', 'id'],
           'code': ['className', 'data-language'],
           'pre': ['className'],
           'a': ['href', 'target', 'rel'],
@@ -120,58 +99,82 @@ export function useMarkdownParser(markdown: string): { html: string; isLoading: 
           'tr': ['className'],
           'th': ['className', 'scope'],
           'td': ['className'],
+          'input': ['type', 'checked', 'disabled'],
+          'div': ['className'],
+          'ol': ['className'],
+          'li': ['className'],
         },
         tagNames: [
           'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-          'p', 'br', 'strong', 'em', 'u', 's',
+          'p', 'br', 'strong', 'em', 'u', 's', 'del',
           'ul', 'ol', 'li',
           'blockquote', 'pre', 'code',
           'a', 'img',
           'table', 'thead', 'tbody', 'tr', 'th', 'td',
-          'div', 'span'
+          'div', 'span',
+          'input',
+          'hr'
         ]
       })
-      .use(modules.rehypePrism.default, {
-        ignoreMissing: true,
-        showLineNumbers: true,
-        defaultLanguage: 'text'
-      })
       .use(modules.rehypeStringify.default);
+
+    return processorRef.current;
   }, []);
     
   const processMarkdown = useCallback(async (content: string): Promise<void> => {
-    if (!parserReady || !content.trim()) {
+    if (!content.trim()) {
       setHtml('');
       return;
     }
 
     try {
       setIsLoading(true);
-      const processor = await createProcessor();
+      const processor = await getOrCreateProcessor();
       const result: ProcessorResult = await processor.process(content);
-      setHtml(String(result));
+      setHtml(result.toString());
     } catch (error) {
       console.error('Error processing markdown:', error);
       setHtml('<p>Error: Failed to process markdown</p>');
     } finally {
       setIsLoading(false);
     }
-  }, [parserReady, createProcessor]);
+  }, [getOrCreateProcessor]);
 
   const debouncedProcess = useMemo(
-    () => debounce(processMarkdown, 150),
+    () => debounce(processMarkdown, 500),
     [processMarkdown]
   );
 
-  useEffect(() => {
-    if (parserReady) {
-      debouncedProcess(markdown);
+  const processIfNeeded = useCallback((content: string) => {
+    if (!content.trim()) {
+      setHtml('');
+      setIsLoading(false);
+      return;
     }
 
-    return () => {
-      debouncedProcess.cancel?.();
-    };
-  }, [markdown, parserReady, debouncedProcess]);
+    if (!isInitializedRef.current && content.length < 10) {
+      setHtml('');
+      return;
+    }
 
-  return { html, isLoading };
+    isInitializedRef.current = true;
+    debouncedProcess(content);
+  }, [debouncedProcess]);
+
+  const triggerProcess = useCallback(() => {
+    if (markdown.trim()) {
+      isInitializedRef.current = true;
+      processMarkdown(markdown);
+    }
+  }, [markdown, processMarkdown]);
+
+  useMemo(() => {
+    processIfNeeded(markdown);
+  }, [markdown, processIfNeeded]);
+
+  return { 
+    html, 
+    isLoading,
+    triggerProcess 
+  };
 }

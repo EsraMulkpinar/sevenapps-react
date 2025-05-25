@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState, lazy, Suspense } from "react";
 import Editor, { EditorRef } from "@components/Editor";
-import Preview from "@components/Preview";
 import SampleSelector from "@components/SampleSelector";
 import ThemeToggle from "@components/ThemeToggle";
 import ShortcutsHelp from "@components/ShortcutsHelp";
@@ -11,10 +10,22 @@ import { useSamples } from "@hooks/useSamples";
 import { useKeyboardShortcuts } from "@hooks/useKeyboardShortcuts";
 import { debounce } from "@/utils";
 
+const Preview = lazy(() => import("@components/Preview"));
+
 const isMac = () => {
   return typeof window !== 'undefined' && 
     (navigator.platform.indexOf('Mac') > -1 || navigator.userAgent.indexOf('Mac') > -1);
 };
+
+function PreviewLoading() {
+  return (
+    <div className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="text-gray-500 dark:text-gray-400 text-sm">
+        Loading preview...
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const { content, setContent, saveContent, isLoading } = useDocument(1);
@@ -22,12 +33,22 @@ export default function Home() {
   const { samples, getSample, updateSample } = useSamples();
   const editorRef = useRef<EditorRef>(null);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [editorFullscreen, setEditorFullscreen] = useState(false);
+  const [previewFullscreen, setPreviewFullscreen] = useState(false);
   
   const isKeyboardTriggered = useRef(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPreviewVisible(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
   
   useEffect(() => {
     if (selectedSample && samples.length > 0 && !isKeyboardTriggered.current) {
-      console.log('📂 Loading sample from useEffect:', selectedSample);
       getSample(selectedSample).then(sample => {
         if (sample?.content) {
           setContent(sample.content);
@@ -103,6 +124,20 @@ export default function Home() {
     setShowShortcutsHelp(prev => !prev);
   }, []);
 
+  const handleEditorFullscreenToggle = useCallback((isFullscreen: boolean) => {
+    setEditorFullscreen(isFullscreen);
+    if (isFullscreen) {
+      setPreviewFullscreen(false);
+    }
+  }, []);
+
+  const handlePreviewFullscreenToggle = useCallback((isFullscreen: boolean) => {
+    setPreviewFullscreen(isFullscreen);
+    if (isFullscreen) {
+      setEditorFullscreen(false);
+    }
+  }, []);
+
   const { shortcuts } = useKeyboardShortcuts({
     onSave: handleSave,
     onSampleSelect: handleSampleSelectByKey,
@@ -120,6 +155,8 @@ export default function Home() {
     );
   }
 
+  const isAnyFullscreen = editorFullscreen || previewFullscreen;
+
   return (
     <div 
       className="flex flex-col h-screen transition-colors duration-200"
@@ -128,24 +165,45 @@ export default function Home() {
         color: 'var(--foreground)'
       }}
     >
-      <div 
-        className="p-4 flex justify-between items-center border-b transition-colors duration-200"
-        style={{
-          borderColor: 'var(--border-color)'
-        }}
-      >
-        <SampleSelector 
-          onSelect={handleSampleSelect} 
-          currentSample={selectedSample} 
-        />
-        <div className="flex items-center gap-2">
-          <ShortcutsHelp shortcuts={shortcuts} />
-          <ThemeToggle />
+      {!isAnyFullscreen && (
+        <div 
+          className="p-4 flex justify-between items-center border-b transition-colors duration-200"
+          style={{
+            borderColor: 'var(--border-color)'
+          }}
+        >
+          <SampleSelector 
+            onSelect={handleSampleSelect} 
+            currentSample={selectedSample} 
+          />
+          <div className="flex items-center gap-2">
+            <ShortcutsHelp shortcuts={shortcuts} />
+            <ThemeToggle />
+          </div>
         </div>
-      </div>
-      <div className="flex flex-col md:flex-row flex-1">
-        <Editor ref={editorRef} value={content} onMarkdownChange={handleMarkdownChange} />
-        <Preview content={content} />
+      )}
+      <div className={`flex ${isAnyFullscreen ? '' : 'flex-col md:flex-row'} flex-1`}>
+        {(!previewFullscreen) && (
+          <Editor 
+            ref={editorRef} 
+            value={content} 
+            onMarkdownChange={handleMarkdownChange}
+            isFullscreen={editorFullscreen}
+            onFullscreenToggle={handleEditorFullscreenToggle}
+          />
+        )}
+        {(!editorFullscreen) && previewVisible && (
+          <Suspense fallback={<PreviewLoading />}>
+            <Preview 
+              content={content} 
+              isFullscreen={previewFullscreen}
+              onFullscreenToggle={handlePreviewFullscreenToggle}
+            />
+          </Suspense>
+        )}
+        {(!editorFullscreen) && !previewVisible && (
+          <PreviewLoading />
+        )}
       </div>
 
       {showShortcutsHelp && (

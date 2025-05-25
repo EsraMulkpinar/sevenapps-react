@@ -42,6 +42,8 @@ export default function ThemeToggle() {
       }
     };
     
+    let cleanup: (() => void) | undefined;
+    
     if (theme === 'dark') {
       applyTheme(true);
     } else if (theme === 'light') {
@@ -57,14 +59,18 @@ export default function ThemeToggle() {
       };
       
       mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
+      cleanup = () => mediaQuery.removeEventListener('change', handleChange);
     }
     
     document.body.classList.add('theme-updated');
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       document.body.classList.remove('theme-updated');
     }, 10);
     
+    return () => {
+      clearTimeout(timeoutId);
+      cleanup?.();
+    };
   }, [theme]);
 
   return (

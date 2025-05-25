@@ -13,7 +13,8 @@ const SAMPLE_FILES = [
   { key: 'hello', title: 'Hello World', importFn: () => import('@samples/hello.md') },
   { key: 'intro', title: 'Introduction', importFn: () => import('@samples/intro.md') },
   { key: 'features', title: 'Features', importFn: () => import('@samples/features.md') },
-  { key: 'usage', title: 'Usage Guide', importFn: () => import('@samples/usage.md') }
+  { key: 'usage', title: 'Usage Guide', importFn: () => import('@samples/usage.md') },
+  { key: 'advanced-features', title: 'Advanced Features', importFn: () => import('@samples/advanced-features.md') },
 ];
 
 export function useSamples() {

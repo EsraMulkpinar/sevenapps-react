@@ -36,15 +36,6 @@ export function useKeyboardShortcuts({
 }: KeyboardShortcutsProps) {
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    console.log('🎹 Key event:', {
-      key: event.key,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      altKey: event.altKey,
-      shiftKey: event.shiftKey,
-      isEnabled
-    });
-
     if (!isEnabled) {
       return;
     }
@@ -130,17 +121,7 @@ export function useKeyboardShortcuts({
       const altMatches = shortcut.altKey ? event.altKey : !event.altKey;
       const shiftMatches = shortcut.shiftKey ? event.shiftKey : !event.shiftKey;
 
-      console.log('🔍 Checking shortcut:', {
-        shortcutKey: shortcut.key,
-        keyMatches,
-        ctrlMatches,
-        altMatches,
-        shiftMatches,
-        allMatch: keyMatches && ctrlMatches && altMatches && shiftMatches
-      });
-
       if (keyMatches && ctrlMatches && altMatches && shiftMatches) {
-        console.log('✅ Shortcut matched!', shortcut.description);
         if (shortcut.preventDefault) {
           event.preventDefault();
         }
