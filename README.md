@@ -84,7 +84,6 @@ src/
 ├── components/             # React components
 ├── hooks/                  # Custom hooks
 ├── db/                     # IndexedDB config
-└── types.d.ts             # TypeScript types
 
 samples/                    # Sample markdown files
 ```
